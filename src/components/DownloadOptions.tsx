@@ -20,11 +20,23 @@ interface VideoInfo {
 
 interface DownloadOptionsProps {
   videoInfo: VideoInfo;
-  onDownload: (url: string, filename: string) => void;
+  onDownload: (url: string, filename: string, quality: string) => void;
 }
 
 const DownloadOptions = ({ videoInfo, onDownload }: DownloadOptionsProps) => {
   const formatDuration = (seconds: string) => {
+    // Se a duração está no formato ISO 8601 (PT4M13S), converter
+    if (seconds.startsWith('PT')) {
+      const match = seconds.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+      if (match) {
+        const hours = parseInt(match[1] || '0');
+        const minutes = parseInt(match[2] || '0');
+        const secs = parseInt(match[3] || '0');
+        const totalMinutes = hours * 60 + minutes;
+        return `${totalMinutes}:${secs.toString().padStart(2, '0')}`;
+      }
+    }
+    
     const mins = Math.floor(parseInt(seconds) / 60);
     const secs = parseInt(seconds) % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -94,7 +106,8 @@ const DownloadOptions = ({ videoInfo, onDownload }: DownloadOptionsProps) => {
             <Button
               onClick={() => onDownload(
                 format.url, 
-                `${videoInfo.title}.${format.format}`
+                `${videoInfo.title}.${format.format}`,
+                format.quality
               )}
               className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
             >

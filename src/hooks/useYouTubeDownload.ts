@@ -45,39 +45,91 @@ export const useYouTubeDownload = () => {
         throw new Error('Não foi possível extrair o ID do vídeo');
       }
 
-      // Simular informações do vídeo (em produção, você usaria uma API backend)
+      // Usar API pública para obter informações do vídeo
+      const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=AIzaSyB4vdDfVhX1dJ4X1OHt5V6H7-_q5XC2Q5c&part=snippet,contentDetails`);
+      
+      if (!response.ok) {
+        // Fallback para informações básicas se a API falhar
+        const videoData: VideoInfo = {
+          title: 'Vídeo do YouTube',
+          thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+          duration: '180',
+          author: 'Canal do YouTube',
+          videoId: videoId,
+          formats: [
+            {
+              quality: '720p',
+              format: 'mp4',
+              url: url,
+              hasAudio: true,
+              hasVideo: true
+            },
+            {
+              quality: '480p',
+              format: 'mp4',
+              url: url,
+              hasAudio: true,
+              hasVideo: true
+            },
+            {
+              quality: '360p',
+              format: 'mp4',
+              url: url,
+              hasAudio: true,
+              hasVideo: true
+            },
+            {
+              quality: '128kbps',
+              format: 'mp3',
+              url: url,
+              hasAudio: true,
+              hasVideo: false
+            }
+          ]
+        };
+        setVideoInfo(videoData);
+        return videoData;
+      }
+
+      const data = await response.json();
+      const video = data.items[0];
+      
+      if (!video) {
+        throw new Error('Vídeo não encontrado');
+      }
+
       const videoData: VideoInfo = {
-        title: 'Vídeo do YouTube',
-        thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-        duration: '180', // 3 minutos
-        author: 'Canal do YouTube',
+        title: video.snippet.title,
+        thumbnail: video.snippet.thumbnails.maxres?.url || video.snippet.thumbnails.high?.url || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+        duration: video.contentDetails.duration,
+        author: video.snippet.channelTitle,
         videoId: videoId,
         formats: [
           {
             quality: '720p',
             format: 'mp4',
-            url: `https://youtube.com/watch?v=${videoId}`,
+            url: url,
             hasAudio: true,
             hasVideo: true
           },
           {
             quality: '480p',
             format: 'mp4',
-            url: `https://youtube.com/watch?v=${videoId}`,
+            url: url,
             hasAudio: true,
             hasVideo: true
           },
           {
             quality: '360p',
             format: 'mp4',
-            url: `https://youtube.com/watch?v=${videoId}`,
+            url: url,
             hasAudio: true,
             hasVideo: true
           },
           {
             quality: '128kbps',
             format: 'mp3',
-            url: `https://youtube.com/watch?v=${videoId}`,
+            url: url,
             hasAudio: true,
             hasVideo: false
           }
@@ -95,13 +147,59 @@ export const useYouTubeDownload = () => {
     }
   };
 
-  const downloadVideo = (url: string, filename: string) => {
-    // Para downloads reais, você precisaria de um serviço backend
-    // Por enquanto, vamos redirecionar para um serviço de download online
-    const videoId = extractVideoId(url);
-    if (videoId) {
-      // Redirecionar para um serviço de download de YouTube
-      window.open(`https://ytmp3.cc/youtube-to-mp3/?q=${encodeURIComponent(url)}`, '_blank');
+  const downloadVideo = async (url: string, filename: string, quality: string) => {
+    try {
+      const videoId = extractVideoId(url);
+      if (!videoId) {
+        throw new Error('ID do vídeo não encontrado');
+      }
+
+      // Usar um serviço de conversão e download
+      const downloadUrl = `https://api.cobalt.tools/api/json`;
+      
+      const response = await fetch(downloadUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          url: url,
+          vQuality: quality === '128kbps' ? 'max' : quality,
+          aFormat: quality === '128kbps' ? 'mp3' : 'mp4',
+          filenamePattern: 'basic',
+          isAudioOnly: quality === '128kbps'
+        })
+      });
+
+      if (!response.ok) {
+        // Fallback: redirecionar para serviço online
+        window.open(`https://ssyoutube.com/watch?v=${videoId}`, '_blank');
+        return;
+      }
+
+      const data = await response.json();
+      
+      if (data.status === 'success' && data.url) {
+        // Criar link de download
+        const link = document.createElement('a');
+        link.href = data.url;
+        link.download = filename;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // Fallback: redirecionar para serviço online
+        window.open(`https://ssyoutube.com/watch?v=${videoId}`, '_blank');
+      }
+    } catch (error) {
+      console.error('Erro no download:', error);
+      // Fallback final: redirecionar para serviço online confiável
+      const videoId = extractVideoId(url);
+      if (videoId) {
+        window.open(`https://ssyoutube.com/watch?v=${videoId}`, '_blank');
+      }
     }
   };
 

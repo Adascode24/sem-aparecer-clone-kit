@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,8 +45,8 @@ const HeroSection = () => {
     }
   };
 
-  const handleVideoDownload = (downloadUrl: string, filename: string) => {
-    downloadVideo(downloadUrl, filename);
+  const handleVideoDownload = (downloadUrl: string, filename: string, quality: string) => {
+    downloadVideo(downloadUrl, filename, quality);
     toast({
       title: "Download iniciado!",
       description: "O download do arquivo foi iniciado."
