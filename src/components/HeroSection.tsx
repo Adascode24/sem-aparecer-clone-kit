@@ -2,18 +2,56 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, Play, Music, FileVideo, Smartphone, Monitor } from 'lucide-react';
+import { Download, Play, Music, FileVideo, Smartphone, Monitor, Loader2 } from 'lucide-react';
+import { useYouTubeDownload } from '@/hooks/useYouTubeDownload';
+import DownloadOptions from './DownloadOptions';
+import { useToast } from '@/hooks/use-toast';
 
 const HeroSection = () => {
   const [url, setUrl] = useState('');
+  const { loading, error, videoInfo, getVideoInfo, downloadVideo } = useYouTubeDownload();
+  const { toast } = useToast();
 
-  const handleDownload = () => {
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      // Aqui seria implementada a lógica real de download
-      console.log('Iniciando download de:', url);
-    } else {
-      alert('Por favor, insira um link válido do YouTube');
+  const handleDownload = async () => {
+    if (!url.trim()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, insira um link do YouTube",
+        variant: "destructive"
+      });
+      return;
     }
+
+    if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+      toast({
+        title: "Erro",
+        description: "Por favor, insira um link válido do YouTube",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await getVideoInfo(url);
+      toast({
+        title: "Sucesso!",
+        description: "Vídeo carregado com sucesso. Escolha o formato para download."
+      });
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar o vídeo. Verifique o link e tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleVideoDownload = (downloadUrl: string, filename: string) => {
+    downloadVideo(downloadUrl, filename);
+    toast({
+      title: "Download iniciado!",
+      description: "O download do arquivo foi iniciado."
+    });
   };
 
   return (
@@ -37,20 +75,47 @@ const HeroSection = () => {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               className="flex-1 h-12 text-lg border-2 border-gray-200 focus:border-red-500"
+              disabled={loading}
             />
             <Button
               onClick={handleDownload}
+              disabled={loading}
               className="h-12 px-8 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-lg font-semibold"
             >
-              <Download className="h-5 w-5 mr-2" />
-              Baixar Agora
+              {loading ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <Download className="h-5 w-5 mr-2" />
+                  Analisar Vídeo
+                </>
+              )}
             </Button>
           </div>
           
           <div className="text-center text-sm text-gray-500">
             ✓ Grátis para sempre • ✓ Sem registro necessário • ✓ Downloads ilimitados
           </div>
+
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700">{error}</p>
+            </div>
+          )}
         </div>
+
+        {/* Download Options */}
+        {videoInfo && (
+          <div className="mb-16">
+            <DownloadOptions 
+              videoInfo={videoInfo} 
+              onDownload={handleVideoDownload}
+            />
+          </div>
+        )}
 
         {/* Format Options */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-16">
